@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sales Skills Trainer</title>
     <style>
-        /* This CSS styles your app to look good on mobile */
         * {
             margin: 0;
             padding: 0;
@@ -44,12 +43,44 @@
             color: #667eea;
         }
 
+        .progress-bar {
+            margin-top: 15px;
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .scenario-counter {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
         .scenario-card {
             background: white;
             padding: 25px;
             border-radius: 15px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .scenario-type {
+            display: inline-block;
+            background: #ede9fe;
+            color: #7c3aed;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 15px;
         }
 
         .customer-speech {
@@ -168,46 +199,107 @@
         .next-btn:hover {
             background: #5568d3;
         }
+
+        .completion-screen {
+            background: white;
+            padding: 40px 25px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .completion-screen.show {
+            display: block;
+        }
+
+        .completion-screen h2 {
+            font-size: 32px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .final-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .stat-box {
+            background: #f3f4f6;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .restart-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .restart-btn:hover {
+            background: #5568d3;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <!-- Header with score -->
-        <div class="header">
+        <div class="header" id="header">
             <div class="score-display">
                 <div>
                     <h1 style="font-size: 24px; margin-bottom: 5px;">Sales Skills Trainer</h1>
-                    <p style="color: #6b7280; font-size: 14px;">Practice handling objections</p>
+                    <p style="color: #6b7280; font-size: 14px;">Master objection handling</p>
                 </div>
                 <div class="score">
                     <span id="score">0</span> pts
                 </div>
             </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="scenario-counter">
+                Scenario <span id="current-scenario">1</span> of <span id="total-scenarios">10</span>
+            </div>
         </div>
 
         <!-- Scenario card -->
-        <div class="scenario-card">
+        <div class="scenario-card" id="scenario-card">
+            <span class="scenario-type" id="scenario-type">Price Objection</span>
+            
             <div class="customer-speech">
                 <div class="customer-label">Customer says:</div>
-                <p id="customer-text">"Your price is too high. I can get the same thing cheaper from your competitor."</p>
+                <p id="customer-text"></p>
             </div>
 
             <div class="question">How do you respond?</div>
 
-            <div class="options" id="options">
-                <button class="option-btn" data-correct="false" data-points="0">
-                    "You're right, let me give you a discount right away."
-                </button>
-                <button class="option-btn" data-correct="true" data-points="100">
-                    "I understand price is important. Can I ask what you're comparing us to? Our solution includes X, Y, and Z that often aren't factored into initial price comparisons."
-                </button>
-                <button class="option-btn" data-correct="false" data-points="0">
-                    "Our competitors cut corners. You get what you pay for."
-                </button>
-                <button class="option-btn" data-correct="false" data-points="0">
-                    "That's our price, take it or leave it."
-                </button>
-            </div>
+            <div class="options" id="options"></div>
 
             <div class="feedback" id="feedback">
                 <div class="feedback-title" id="feedback-title"></div>
@@ -215,62 +307,279 @@
                 <button class="next-btn" id="next-btn">Next Scenario</button>
             </div>
         </div>
+
+        <!-- Completion screen -->
+        <div class="completion-screen" id="completion-screen">
+            <h2>🎉 Training Complete!</h2>
+            <div class="final-score" id="final-score">0</div>
+            <p style="color: #6b7280; margin-bottom: 20px;">Total Points Earned</p>
+            
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="correct-count">0</div>
+                    <div class="stat-label">Correct Answers</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="accuracy">0%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+            </div>
+
+            <button class="restart-btn" onclick="location.reload()">Practice Again</button>
+        </div>
     </div>
 
     <script>
-        // This JavaScript makes the app interactive
-        
-        // Get references to elements we'll need to update
+        // All our sales scenarios - each has objection type, customer quote, options, and feedback
+        const scenarios = [
+            {
+                type: "Price Objection",
+                customerText: "Your price is too high. I can get the same thing cheaper from your competitor.",
+                options: [
+                    { text: "You're right, let me give you a discount right away.", correct: false },
+                    { text: "I understand price is important. Can I ask what you're comparing us to? Our solution includes X, Y, and Z that often aren't factored into initial price comparisons.", correct: true },
+                    { text: "Our competitors cut corners. You get what you pay for.", correct: false },
+                    { text: "That's our price, take it or leave it.", correct: false }
+                ],
+                correctFeedback: "Excellent! This response acknowledges the objection, asks clarifying questions, and highlights value without being defensive. You've demonstrated active listening and positioned your product's unique benefits.",
+                incorrectFeedback: "Not quite. Jumping to discounts too quickly devalues your offering, being defensive about competitors damages trust, and being dismissive closes the conversation. Try understanding their concerns first."
+            },
+            {
+                type: "Timing Objection",
+                customerText: "This looks good, but now isn't the right time for us. Maybe next quarter.",
+                options: [
+                    { text: "I understand timing is everything. What specifically changes next quarter that would make this a better fit?", correct: true },
+                    { text: "No problem, I'll follow up in three months.", correct: false },
+                    { text: "Everyone says that. You're losing money every day you wait.", correct: false },
+                    { text: "We have a special offer ending this week that could help with budget concerns.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're uncovering the real reason behind the timing objection. Often 'not now' means something else - budget concerns, competing priorities, or uncertainty. By asking what changes, you can address the real issue.",
+                incorrectFeedback: "Simply accepting the delay or creating false urgency typically backfires. Dig deeper to understand what's really driving the timing concern so you can address it properly."
+            },
+            {
+                type: "Authority Objection",
+                customerText: "I like this, but I need to run it by my boss first before we can move forward.",
+                options: [
+                    { text: "Great! When can you talk to them? I'll check back next week.", correct: false },
+                    { text: "That makes sense. To help you present this effectively to your boss, what are their main priorities right now? I can help you build the business case.", correct: true },
+                    { text: "Can we schedule a call with both of you? I'd love to present this directly.", correct: false },
+                    { text: "No worries, here's our brochure. Show it to them and let me know.", correct: false }
+                ],
+                correctFeedback: "Excellent approach! You're empowering your contact to be your internal champion. By understanding the decision-maker's priorities, you can help craft a compelling case that addresses their specific concerns.",
+                incorrectFeedback: "Don't lose control of the sale. Going around your contact or passively waiting often leads nowhere. Help them sell internally by understanding what matters to the decision-maker."
+            },
+            {
+                type: "Competition Objection",
+                customerText: "We're already working with [Competitor]. Why should we switch to you?",
+                options: [
+                    { text: "What's working well with [Competitor], and where do you wish things were different? I can show you how we specifically address those gaps.", correct: true },
+                    { text: "Our product is better in every way. Let me show you a comparison chart.", correct: false },
+                    { text: "They're good, but we're the industry leader. Here are our awards.", correct: false },
+                    { text: "I'm not asking you to switch - maybe we can work together on a different project?", correct: false }
+                ],
+                correctFeedback: "Great work! You're not attacking the competitor or being defensive. Instead, you're learning what's working and what isn't, which allows you to position your unique value against their specific pain points.",
+                incorrectFeedback: "Directly attacking competitors or retreating entirely are both weak moves. Focus on understanding their current situation and positioning your specific advantages where they matter most."
+            },
+            {
+                type: "Need Objection",
+                customerText: "I'm not sure we really need this right now. Things are working fine as they are.",
+                options: [
+                    { text: "That's great that things are working! Out of curiosity, what would have to change for a solution like this to become a priority?", correct: true },
+                    { text: "Just because things work doesn't mean they can't be better. Let me show you our ROI calculator.", correct: false },
+                    { text: "I understand. Can I stay in touch for when things change?", correct: false },
+                    { text: "Most of our clients said the same thing before they saw what they were missing out on.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're accepting their current state while exploring what future triggers might exist. This keeps the conversation going and helps you understand if there's latent need or if you should gracefully exit.",
+                incorrectFeedback: "Pushing value when someone doesn't see a need creates resistance. Instead, understand what would trigger need in the future, or respectfully acknowledge this may not be the right fit right now."
+            },
+            {
+                type: "Feature Objection",
+                customerText: "Your product doesn't have [specific feature] that we need.",
+                options: [
+                    { text: "You're right, we don't have that yet. Let me see if it's on our roadmap.", correct: false },
+                    { text: "Tell me more about how you'd use that feature. I want to understand if we solve that need differently or if it's truly a gap for you.", correct: true },
+                    { text: "That feature isn't as important as most people think. Here's why our approach is better.", correct: false },
+                    { text: "We can custom build that for you, but it will cost extra.", correct: false }
+                ],
+                correctFeedback: "Excellent! You're digging into the underlying need rather than immediately conceding or defending. Sometimes you solve their need in a different way, or the feature is truly critical - but you need to understand first.",
+                incorrectFeedback: "Don't immediately give up or get defensive. Understand why they want that feature - you might solve the need differently, or you'll learn if this is truly a dealbreaker."
+            },
+            {
+                type: "Trust Objection",
+                customerText: "I've never heard of your company. How do I know you'll be around in a year?",
+                options: [
+                    { text: "We've been in business for X years, have Y customers, and are backed by Z investors. Here's more about our stability.", correct: false },
+                    { text: "I appreciate that concern - choosing a partner is a big decision. What would give you confidence in working with us? References from similar companies, a pilot program, or something else?", correct: true },
+                    { text: "All our competitors started where we are. We're the future of this industry.", correct: false },
+                    { text: "We offer a money-back guarantee, so there's no risk to you.", correct: false }
+                ],
+                correctFeedback: "Great approach! Rather than just listing credentials, you're understanding what would specifically build trust for them. Different buyers need different proof - some want references, others want a low-risk pilot, others want financial backing info.",
+                incorrectFeedback: "Simply listing facts about your company or making bold claims often doesn't build real trust. Understand what would specifically give them confidence and address that directly."
+            },
+            {
+                type: "Budget Objection",
+                customerText: "We don't have budget for this right now.",
+                options: [
+                    { text: "When does your budget refresh? I can follow up then.", correct: false },
+                    { text: "We have flexible payment plans that could work with your current budget.", correct: false },
+                    { text: "I understand budget is tight. Help me understand - if budget weren't a constraint, is this something you'd want to move forward with? That tells me if we should find creative ways to make this work or if timing just isn't right.", correct: true },
+                    { text: "The ROI on this pays for itself in 6 months, so budget shouldn't be an issue.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're separating 'no budget' from 'no interest.' If they'd move forward with unlimited budget, you know the value is there and can explore creative solutions. If not, budget might just be a polite objection covering other concerns.",
+                incorrectFeedback: "Budget objections are often smoke screens for other issues. Before offering payment plans or waiting for next quarter, confirm whether budget is the real blocker or if there are deeper concerns."
+            },
+            {
+                type: "Reference Objection",
+                customerText: "Do you have any clients in our industry? I'd want to see case studies first.",
+                options: [
+                    { text: "We work across many industries. Let me send you some general case studies.", correct: false },
+                    { text: "That's a smart question. We have clients in [similar industry]. What specific outcomes or challenges would be most relevant for you to see in a case study?", correct: true },
+                    { text: "We're relatively new to your industry, but our solution is industry-agnostic.", correct: false },
+                    { text: "I can't share client names due to NDAs, but I can speak to the results we've driven.", correct: false }
+                ],
+                correctFeedback: "Excellent! You're showing you have relevant experience while focusing them on what actually matters - the outcomes and challenges they care about. This helps you share the most relevant proof, even if it's not from their exact industry.",
+                incorrectFeedback: "Generic case studies or vague references don't build confidence. Understand what they specifically want to see proven - industry knowledge, certain outcomes, scale - then provide the most relevant examples you have."
+            },
+            {
+                type: "Stall Objection",
+                customerText: "Let me think about it and I'll get back to you.",
+                options: [
+                    { text: "Absolutely, take your time. When should I follow up?", correct: false },
+                    { text: "Of course. Just to make sure I've given you everything you need - what specific areas do you want to think through? Maybe I can help clarify.", correct: true },
+                    { text: "I understand you want to think it over. Just so you know, this pricing is only available until Friday.", correct: false },
+                    { text: "Sure thing. I'll send over some additional materials for you to review.", correct: false }
+                ],
+                correctFeedback: "Perfect! 'Let me think about it' usually means 'I have unspoken concerns.' By asking what they need to think through, you surface real objections you can address rather than leaving it to chance. This keeps the conversation productive.",
+                incorrectFeedback: "Accepting a stall or creating false urgency typically leads to ghosting. Respectfully uncover what's really on their mind so you can address concerns while you have their attention."
+            }
+        ];
+
+        // Game state variables
+        let score = 0;
+        let currentScenarioIndex = 0;
+        let correctAnswers = 0;
+        let shuffledScenarios = [];
+
+        // Get DOM elements
         const scoreElement = document.getElementById('score');
-        const optionButtons = document.querySelectorAll('.option-btn');
+        const currentScenarioElement = document.getElementById('current-scenario');
+        const totalScenariosElement = document.getElementById('total-scenarios');
+        const progressFill = document.getElementById('progress-fill');
+        const scenarioCard = document.getElementById('scenario-card');
+        const completionScreen = document.getElementById('completion-screen');
+        const scenarioTypeElement = document.getElementById('scenario-type');
+        const customerTextElement = document.getElementById('customer-text');
+        const optionsContainer = document.getElementById('options');
         const feedbackDiv = document.getElementById('feedback');
         const feedbackTitle = document.getElementById('feedback-title');
         const feedbackText = document.getElementById('feedback-text');
         const nextBtn = document.getElementById('next-btn');
-        
-        // Track the user's score
-        let score = 0;
 
-        // Feedback messages for correct and incorrect answers
-        const correctFeedback = "Excellent! This response acknowledges the objection, asks clarifying questions, and highlights value without being defensive. You've demonstrated active listening and positioned your product's unique benefits.";
-        
-        const incorrectFeedback = "Not quite. Jumping to discounts too quickly devalues your offering, being defensive about competitors damages trust, and being dismissive closes the conversation. Try understanding their concerns first and highlighting your unique value.";
+        // Shuffle scenarios at the start
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
 
-        // Add click event to each option button
-        optionButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                // Prevent clicking multiple times
-                if (this.disabled) return;
-                
-                // Check if answer is correct
-                const isCorrect = this.dataset.correct === 'true';
-                const points = parseInt(this.dataset.points);
-                
-                // Update score if correct
-                if (isCorrect) {
-                    score += points;
-                    scoreElement.textContent = score;
-                }
-                
-                // Show visual feedback on buttons
-                this.classList.add(isCorrect ? 'correct' : 'incorrect');
-                
-                // Disable all buttons after selection
-                optionButtons.forEach(btn => btn.disabled = true);
-                
-                // Show feedback message
-                feedbackDiv.classList.add('show', isCorrect ? 'correct' : 'incorrect');
-                feedbackTitle.textContent = isCorrect ? '🎉 Great job!' : '💡 Learning moment';
-                feedbackText.textContent = isCorrect ? correctFeedback : incorrectFeedback;
-                nextBtn.classList.add('show');
+        // Initialize game
+        function initGame() {
+            shuffledScenarios = shuffleArray(scenarios);
+            totalScenariosElement.textContent = shuffledScenarios.length;
+            loadScenario();
+        }
+
+        // Load current scenario
+        function loadScenario() {
+            if (currentScenarioIndex >= shuffledScenarios.length) {
+                showCompletionScreen();
+                return;
+            }
+
+            const scenario = shuffledScenarios[currentScenarioIndex];
+            
+            // Update header
+            currentScenarioElement.textContent = currentScenarioIndex + 1;
+            const progress = ((currentScenarioIndex + 1) / shuffledScenarios.length) * 100;
+            progressFill.style.width = progress + '%';
+
+            // Update scenario content
+            scenarioTypeElement.textContent = scenario.type;
+            customerTextElement.textContent = scenario.customerText;
+
+            // Clear and rebuild options
+            optionsContainer.innerHTML = '';
+            feedbackDiv.classList.remove('show', 'correct', 'incorrect');
+            nextBtn.classList.remove('show');
+
+            scenario.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = option.text;
+                button.dataset.correct = option.correct;
+                button.addEventListener('click', handleAnswer);
+                optionsContainer.appendChild(button);
             });
+        }
+
+        // Handle answer selection
+        function handleAnswer(event) {
+            const selectedButton = event.target;
+            const isCorrect = selectedButton.dataset.correct === 'true';
+            const scenario = shuffledScenarios[currentScenarioIndex];
+            
+            // Disable all buttons
+            const allButtons = optionsContainer.querySelectorAll('.option-btn');
+            allButtons.forEach(btn => {
+                btn.disabled = true;
+                // Highlight the correct answer
+                if (btn.dataset.correct === 'true') {
+                    btn.classList.add('correct');
+                }
+            });
+
+            // Mark selected answer
+            if (!isCorrect) {
+                selectedButton.classList.add('incorrect');
+            }
+
+            // Update score
+            if (isCorrect) {
+                score += 100;
+                correctAnswers++;
+                scoreElement.textContent = score;
+            }
+
+            // Show feedback
+            feedbackDiv.classList.add('show', isCorrect ? 'correct' : 'incorrect');
+            feedbackTitle.textContent = isCorrect ? '🎉 Excellent!' : '💡 Learning Moment';
+            feedbackText.textContent = isCorrect ? scenario.correctFeedback : scenario.incorrectFeedback;
+            nextBtn.classList.add('show');
+        }
+
+        // Next scenario
+        nextBtn.addEventListener('click', () => {
+            currentScenarioIndex++;
+            loadScenario();
         });
 
-        // Next button reloads the page (in future, this will load new scenarios)
-        nextBtn.addEventListener('click', function() {
-            alert('Great work! In the full version, this will load new scenarios. For now, refresh the page to try again.');
-            location.reload();
-        });
+        // Show completion screen
+        function showCompletionScreen() {
+            scenarioCard.style.display = 'none';
+            completionScreen.classList.add('show');
+            
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('correct-count').textContent = correctAnswers;
+            
+            const accuracy = Math.round((correctAnswers / shuffledScenarios.length) * 100);
+            document.getElementById('accuracy').textContent = accuracy + '%';
+        }
+
+        // Start the game
+        initGame();
     </script>
 </body>
 </html>
