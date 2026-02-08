@@ -156,6 +156,63 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
+        .timer-container {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .timer-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .timer-display.warning {
+            color: #f59e0b;
+        }
+
+        .timer-display.danger {
+            color: #ef4444;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .timer-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10b981 0%, #667eea 100%);
+            transition: width 0.1s linear;
+        }
+
+        .timer-bar-fill.warning {
+            background: linear-gradient(90deg, #f59e0b 0%, #f59e0b 100%);
+        }
+
+        .timer-bar-fill.danger {
+            background: linear-gradient(90deg, #ef4444 0%, #ef4444 100%);
+        }
+
+        .points-indicator {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
         .scenario-type {
             display: inline-block;
             background: #ede9fe;
@@ -298,6 +355,17 @@
             font-size: 18px;
         }
 
+        .points-earned {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
         .countdown {
             text-align: center;
             font-size: 48px;
@@ -397,6 +465,14 @@
                 <div id="live-scoreboard"></div>
             </div>
 
+            <div class="timer-container" id="timer-container">
+                <div class="timer-display" id="timer-display">30</div>
+                <div class="timer-bar">
+                    <div class="timer-bar-fill" id="timer-bar-fill" style="width: 100%"></div>
+                </div>
+                <div class="points-indicator" id="points-indicator">Answer now for 1000 points!</div>
+            </div>
+
             <div class="scenario-card">
                 <div class="progress-indicator">
                     Question <span id="question-number">1</span> of <span id="total-questions">10</span>
@@ -415,6 +491,7 @@
 
                 <div class="feedback" id="game-feedback">
                     <div class="feedback-title" id="game-feedback-title"></div>
+                    <div class="points-earned" id="points-earned" style="display: none;"></div>
                     <p id="game-feedback-text"></p>
                 </div>
 
@@ -455,139 +532,223 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        // Game scenarios
+        // Game scenarios (using your custom ETF/Managed Funds scenarios)
         const scenarios = [
             {
-                type: "Price Objection",
-                customerText: "Your price is too high. I can get the same thing cheaper from your competitor.",
+                type: "Fee Objection",
+                customerText: "Your management fees are higher than passive index ETFs. Why should my clients pay more?",
                 options: [
-                    { text: "You're right, let me give you a discount right away.", correct: false },
-                    { text: "I understand price is important. Can I ask what you're comparing us to? Our solution includes X, Y, and Z that often aren't factored into initial price comparisons.", correct: true },
-                    { text: "Our competitors cut corners. You get what you pay for.", correct: false },
-                    { text: "That's our price, take it or leave it.", correct: false }
+                    { text: "You're right, let me see if I can get you a fee discount.", correct: false },
+                    { text: "I understand fee sensitivity is crucial when advising clients. Can we look at the total value proposition? Our active management has outperformed the index by X% over 3 years, and when you factor in our research support and portfolio construction tools for advisers, what's the total cost of ownership versus total value delivered?", correct: true },
+                    { text: "Passive funds are just beta exposure. You get what you pay for with active management.", correct: false },
+                    { text: "Our fees are competitive within the active management space.", correct: false }
                 ],
-                correctFeedback: "Excellent! This response acknowledges the objection, asks clarifying questions, and highlights value without being defensive.",
-                incorrectFeedback: "Not quite. Jumping to discounts devalues your offering, being defensive damages trust, and being dismissive closes conversation."
+                correctFeedback: "Excellent! You've shifted from price to value, quantified outperformance, and highlighted the additional adviser support tools. You're helping them see the complete picture beyond just the management fee.",
+                incorrectFeedback: "Don't immediately discount or get defensive about active vs passive. Show the complete value - performance net of fees, research support, and how it helps them serve their clients better."
             },
             {
-                type: "Timing Objection",
-                customerText: "This looks good, but now isn't the right time for us. Maybe next quarter.",
+                type: "Platform Availability",
+                customerText: "Your fund isn't on our platform. It's too much hassle to add new fund managers.",
                 options: [
-                    { text: "I understand timing is everything. What specifically changes next quarter that would make this a better fit?", correct: true },
-                    { text: "No problem, I'll follow up in three months.", correct: false },
-                    { text: "Everyone says that. You're losing money every day you wait.", correct: false },
-                    { text: "We have a special offer ending this week that could help with budget concerns.", correct: false }
+                    { text: "I understand. Which platform are you on? Let me check our current status and see what we can do.", correct: true },
+                    { text: "We're working on getting listed on all major platforms. Can I follow up in a few months?", correct: false },
+                    { text: "Actually, adding a new manager is straightforward - I can walk you through the process.", correct: false },
+                    { text: "Many advisers use our fund despite platform limitations because the performance justifies it.", correct: false }
                 ],
-                correctFeedback: "Perfect! You're uncovering the real reason behind the timing objection. Often 'not now' means something else.",
-                incorrectFeedback: "Simply accepting the delay or creating false urgency typically backfires. Dig deeper to understand what's really driving the concern."
+                correctFeedback: "Perfect! You're gathering information first. This lets you check if you're already on their platform, understand the timeline for approval, or explore if they use multiple platforms. You're problem-solving rather than dismissing their concern.",
+                incorrectFeedback: "Don't assume the barrier is insurmountable or minimize their concern. Understand their specific platform situation first - you might already be accessible to them, or you can work with your internal team on fast-tracking approval."
             },
             {
-                type: "Authority Objection",
-                customerText: "I like this, but I need to run it by my boss first before we can move forward.",
+                type: "Performance Track Record",
+                customerText: "Your fund has only been running for 18 months. My clients need a longer track record.",
                 options: [
-                    { text: "Great! When can you talk to them? I'll check back next week.", correct: false },
-                    { text: "That makes sense. To help you present this effectively to your boss, what are their main priorities right now? I can help you build the business case.", correct: true },
-                    { text: "Can we schedule a call with both of you? I'd love to present this directly.", correct: false },
-                    { text: "No worries, here's our brochure. Show it to them and let me know.", correct: false }
+                    { text: "That's fair. What timeline would make you comfortable? I can show you the portfolio manager's 10-year track record at their previous firm managing a similar strategy.", correct: true },
+                    { text: "18 months is enough to see our investment process working. Look at our recent performance.", correct: false },
+                    { text: "Track record isn't everything - our investment team has decades of combined experience.", correct: false },
+                    { text: "I understand. Can I stay in touch and we'll reconnect when we have 3 years?", correct: false }
                 ],
-                correctFeedback: "Excellent! You're empowering your contact to be your internal champion by understanding the decision-maker's priorities.",
-                incorrectFeedback: "Don't lose control of the sale. Help them sell internally by understanding what matters to the decision-maker."
+                correctFeedback: "Great work! You're acknowledging their valid concern while bridging to the portfolio manager's longer track record and similar strategy experience. This addresses the underlying need for proven capability while respecting the new fund timeline.",
+                incorrectFeedback: "Don't dismiss the importance of track record or just wait. Show the continuity of the investment approach through the manager's history, similar strategies, or the team's pedigree. Address the substance of their concern."
             },
             {
-                type: "Competition Objection",
-                customerText: "We're already working with your competitor. Why should we switch to you?",
+                type: "Existing Manager Relationship",
+                customerText: "We already use a competitor for this asset class. Our clients are happy with them.",
                 options: [
-                    { text: "What's working well with them, and where do you wish things were different? I can show you how we specifically address those gaps.", correct: true },
-                    { text: "Our product is better in every way. Let me show you a comparison chart.", correct: false },
-                    { text: "They're good, but we're the industry leader. Here are our awards.", correct: false },
-                    { text: "I'm not asking you to switch - maybe we can work together on a different project?", correct: false }
+                    { text: "That's great they're working well. Out of curiosity, if you were to consider a complementary or alternative approach in this space, what would need to be different or better?", correct: true },
+                    { text: "Let me show you our head-to-head performance comparison. We've beaten them over 1, 3, and 5 years.", correct: false },
+                    { text: "They're a solid choice. Maybe we could work together on a different asset class?", correct: false },
+                    { text: "Have you done a recent portfolio review? Market conditions have changed.", correct: false }
                 ],
-                correctFeedback: "Great work! You're learning what's working and what isn't, allowing you to position your unique value against their specific pain points.",
-                incorrectFeedback: "Directly attacking competitors or retreating entirely are both weak moves. Focus on understanding their current situation."
+                correctFeedback: "Excellent! You're respecting the existing relationship while exploring if there's an opening for diversification, different style exposure, or specific gaps. This is consultative rather than confrontational.",
+                incorrectFeedback: "Don't attack the incumbent or retreat entirely. Understand what would make them consider an alternative - different investment style, risk profile, or specific client needs - then position accordingly."
             },
             {
-                type: "Need Objection",
-                customerText: "I'm not sure we really need this right now. Things are working fine as they are.",
+                type: "Research Coverage",
+                customerText: "I need to complete due diligence before I can recommend this to clients. I don't have time right now.",
                 options: [
-                    { text: "That's great that things are working! Out of curiosity, what would have to change for a solution like this to become a priority?", correct: true },
-                    { text: "Just because things work doesn't mean they can't be better. Let me show you our ROI calculator.", correct: false },
-                    { text: "I understand. Can I stay in touch for when things change?", correct: false },
-                    { text: "Most of our clients said the same thing before they saw what they were missing out on.", correct: false }
+                    { text: "I completely understand - due diligence is critical. What's your typical DD process? I can provide our standard materials upfront and then we can schedule a focused session when you have capacity to review properly.", correct: true },
+                    { text: "Our research team can do a call next week to answer all your questions.", correct: false },
+                    { text: "Due diligence doesn't have to be time-consuming. I can give you the executive summary.", correct: false },
+                    { text: "No problem. When would be a better time? I'll follow up then.", correct: false }
                 ],
-                correctFeedback: "Perfect! You're accepting their current state while exploring what future triggers might exist.",
-                incorrectFeedback: "Pushing value when someone doesn't see a need creates resistance. Understand what would trigger need in the future."
+                correctFeedback: "Perfect! You're respecting their process, making it easier for them by understanding what they need, and setting up for a productive conversation when they're ready. You're reducing friction rather than adding pressure.",
+                incorrectFeedback: "Don't minimize the importance of DD or just defer. Understand their process and proactively provide what they need to make their job easier when they have time to focus on it."
             },
             {
-                type: "Feature Objection",
-                customerText: "Your product doesn't have a specific feature that we need.",
+                type: "Client Suitability",
+                customerText: "I'm not sure this fund suits my client base. They're mostly conservative retirees.",
                 options: [
-                    { text: "You're right, we don't have that yet. Let me see if it's on our roadmap.", correct: false },
-                    { text: "Tell me more about how you'd use that feature. I want to understand if we solve that need differently or if it's truly a gap for you.", correct: true },
-                    { text: "That feature isn't as important as most people think. Here's why our approach is better.", correct: false },
-                    { text: "We can custom build that for you, but it will cost extra.", correct: false }
+                    { text: "Tell me more about your typical client - their risk tolerance, income needs, and current portfolio allocation. Let's see if and where this might fit, or if it's genuinely not a match.", correct: true },
+                    { text: "This fund is actually perfect for conservative clients - low volatility and consistent income.", correct: false },
+                    { text: "You might be surprised. Let me show you the risk metrics compared to balanced funds.", correct: false },
+                    { text: "That's fair. Would you have clients with different profiles where this might work?", correct: false }
                 ],
-                correctFeedback: "Excellent! You're digging into the underlying need rather than immediately conceding or defending.",
-                incorrectFeedback: "Don't immediately give up or get defensive. Understand why they want that feature."
+                correctFeedback: "Excellent! You're digging into their client base specifics rather than making assumptions. This might reveal it's genuinely not a fit, or you might uncover a subset of clients or a portfolio role that makes sense. Either way, you're being consultative.",
+                incorrectFeedback: "Don't force fit or make generic claims. Understand their clients' actual needs and circumstances, then honestly assess fit. Being selective builds trust and might reveal opportunities you hadn't considered."
             },
             {
-                type: "Trust Objection",
-                customerText: "I've never heard of your company. How do I know you'll be around in a year?",
+                type: "Compliance Concerns",
+                customerText: "Our compliance team has strict APL requirements. Getting new funds approved takes months.",
                 options: [
-                    { text: "We've been in business for X years, have Y customers, and are backed by Z investors.", correct: false },
-                    { text: "I appreciate that concern - choosing a partner is a big decision. What would give you confidence in working with us? References from similar companies, a pilot program, or something else?", correct: true },
-                    { text: "All our competitors started where we are. We're the future of this industry.", correct: false },
-                    { text: "We offer a money-back guarantee, so there's no risk to you.", correct: false }
+                    { text: "I work with many practices with similar compliance processes. What specific documentation or criteria does your compliance team require? I can provide everything upfront to streamline the process.", correct: true },
+                    { text: "Most compliance teams approve us quickly once they see our materials.", correct: false },
+                    { text: "That seems excessive. Have you pushed back on that timeline?", correct: false },
+                    { text: "I understand. Shall I check back in 6 months?", correct: false }
                 ],
-                correctFeedback: "Great approach! Rather than just listing credentials, you're understanding what would specifically build trust for them.",
-                incorrectFeedback: "Simply listing facts about your company or making bold claims often doesn't build real trust."
+                correctFeedback: "Great approach! You're showing experience with compliance processes, taking ownership of making it easier, and demonstrating you can navigate their specific requirements. This positions you as a partner, not another hurdle.",
+                incorrectFeedback: "Don't dismiss their compliance requirements or just wait passively. Understand what's needed, provide it proactively, and show you've helped other advisers navigate similar processes successfully."
             },
             {
-                type: "Budget Objection",
-                customerText: "We don't have budget for this right now.",
+                type: "Market Timing",
+                customerText: "With markets at all-time highs, now isn't the right time to be putting client money into equities.",
                 options: [
-                    { text: "When does your budget refresh? I can follow up then.", correct: false },
-                    { text: "We have flexible payment plans that could work with your current budget.", correct: false },
-                    { text: "I understand budget is tight. Help me understand - if budget weren't a constraint, is this something you'd want to move forward with?", correct: true },
-                    { text: "The ROI on this pays for itself in 6 months, so budget shouldn't be an issue.", correct: false }
+                    { text: "I hear that concern about valuations. What's your current thinking on portfolio positioning? Are you looking at tactical opportunities, or is this more about your clients' long-term strategic allocations?", correct: true },
+                    { text: "Market timing is notoriously difficult. Time in the market beats timing the market.", correct: false },
+                    { text: "That's exactly why active management matters - we can be selective in this environment.", correct: false },
+                    { text: "You're right to be cautious. When do you think would be a better entry point?", correct: false }
                 ],
-                correctFeedback: "Perfect! You're separating 'no budget' from 'no interest.' This helps you understand if budget is the real blocker.",
-                incorrectFeedback: "Budget objections are often smoke screens for other issues. Confirm whether budget is the real blocker."
+                correctFeedback: "Perfect! You're understanding their investment philosophy and client positioning strategy rather than debating market timing. This helps you understand if they're tactical (maybe there's an opportunity) or strategic (different conversation about long-term allocation).",
+                incorrectFeedback: "Don't lecture about market timing or concede their timing concerns. Understand their broader portfolio construction approach and client objectives - that's where the real conversation is."
             },
             {
-                type: "Reference Objection",
-                customerText: "Do you have any clients in our industry? I'd want to see case studies first.",
+                type: "Documentation Requirements",
+                customerText: "I need detailed fact sheets, PDS, and research reports before I can even look at this.",
                 options: [
-                    { text: "We work across many industries. Let me send you some general case studies.", correct: false },
-                    { text: "That's a smart question. We have clients in similar industries. What specific outcomes or challenges would be most relevant for you to see?", correct: true },
-                    { text: "We're relatively new to your industry, but our solution is industry-agnostic.", correct: false },
-                    { text: "I can't share client names due to NDAs, but I can speak to the results we've driven.", correct: false }
+                    { text: "Absolutely. I'll send everything over today. Beyond the standard docs, is there specific information that's most important for your initial assessment - performance attribution, portfolio positioning, team bios?", correct: true },
+                    { text: "Of course, I'll email you our complete information pack right away.", correct: false },
+                    { text: "All of that is available on our website. I can send you the link.", correct: false },
+                    { text: "I have everything here. Can we schedule 30 minutes to walk through it together?", correct: false }
                 ],
-                correctFeedback: "Excellent! You're showing relevant experience while focusing them on outcomes and challenges they care about.",
-                incorrectFeedback: "Generic case studies or vague references don't build confidence. Understand what they specifically want to see proven."
+                correctFeedback: "Excellent! You're providing what they need immediately while also understanding what matters most to them. This lets you prioritize and potentially flag the most relevant materials, making their review more efficient.",
+                incorrectFeedback: "Don't just send generic materials or push for a meeting. Provide what they need and understand their decision criteria so you can help them focus on what matters most."
             },
             {
-                type: "Stall Objection",
-                customerText: "Let me think about it and I'll get back to you.",
+                type: "Benchmark Comparison",
+                customerText: "You've underperformed your benchmark in 3 of the last 5 years. How do I explain that to clients?",
                 options: [
-                    { text: "Absolutely, take your time. When should I follow up?", correct: false },
-                    { text: "Of course. Just to make sure I've given you everything you need - what specific areas do you want to think through?", correct: true },
-                    { text: "I understand you want to think it over. Just so you know, this pricing is only available until Friday.", correct: false },
-                    { text: "Sure thing. I'll send over some additional materials for you to review.", correct: false }
+                    { text: "Let's look at the full context. What matters most to your clients - calendar year performance or risk-adjusted returns over a full cycle? Our approach prioritizes capital preservation in down markets, which means we might lag in strong up years but protect better in corrections. Over the full 5 years, here's our risk-return profile versus the benchmark.", correct: true },
+                    { text: "Active managers can have periods of underperformance. What matters is the long-term.", correct: false },
+                    { text: "Our benchmark isn't really appropriate for our strategy. We should use a different comparison.", correct: false },
+                    { text: "Those underperforming years were market-driven, not fund management issues.", correct: false }
                 ],
-                correctFeedback: "Perfect! 'Let me think about it' usually means 'I have unspoken concerns.' By asking what they need to think through, you surface real objections.",
-                incorrectFeedback: "Accepting a stall or creating false urgency typically leads to ghosting. Respectfully uncover what's really on their mind."
+                correctFeedback: "Perfect! You're reframing the conversation to what actually matters to their clients - risk-adjusted returns and the role this plays in a portfolio. You're acknowledging the underperformance while providing context about the investment philosophy and trade-offs.",
+                incorrectFeedback: "Don't make excuses or dismiss the concern. Address it directly with context about the strategy's objectives, risk management, and how that serves client needs. Help them articulate the value to their clients."
             }
         ];
 
+        // Timer configuration
+        const QUESTION_TIME_LIMIT = 30; // seconds
+        const MAX_POINTS = 1000;
+        
         // Global state
         let currentUser = null;
         let currentRoom = null;
         let isHost = false;
+        let timerInterval = null;
+        let questionStartTime = null;
 
         // Show/hide screens
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+        }
+
+        // Calculate points based on time remaining
+        function calculatePoints(secondsRemaining) {
+            // Linear decay from 1000 to 100 points
+            const minPoints = 100;
+            const pointsPerSecond = (MAX_POINTS - minPoints) / QUESTION_TIME_LIMIT;
+            return Math.max(minPoints, Math.round(MAX_POINTS - (QUESTION_TIME_LIMIT - secondsRemaining) * pointsPerSecond));
+        }
+
+        // Start timer for question
+        function startQuestionTimer() {
+            questionStartTime = Date.now();
+            let timeLeft = QUESTION_TIME_LIMIT;
+            
+            const timerDisplay = document.getElementById('timer-display');
+            const timerBarFill = document.getElementById('timer-bar-fill');
+            const pointsIndicator = document.getElementById('points-indicator');
+            
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+                timeLeft = QUESTION_TIME_LIMIT - elapsed;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    timeLeft = 0;
+                    // Auto-submit as wrong answer if time runs out
+                    autoSubmitTimeout();
+                }
+                
+                // Update display
+                timerDisplay.textContent = timeLeft;
+                const percentage = (timeLeft / QUESTION_TIME_LIMIT) * 100;
+                timerBarFill.style.width = percentage + '%';
+                
+                // Update points indicator
+                const currentPoints = calculatePoints(timeLeft);
+                pointsIndicator.textContent = `Answer now for ${currentPoints} points!`;
+                
+                // Color coding
+                timerDisplay.classList.remove('warning', 'danger');
+                timerBarFill.classList.remove('warning', 'danger');
+                
+                if (timeLeft <= 5) {
+                    timerDisplay.classList.add('danger');
+                    timerBarFill.classList.add('danger');
+                } else if (timeLeft <= 10) {
+                    timerDisplay.classList.add('warning');
+                    timerBarFill.classList.add('warning');
+                }
+            }, 100);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        async function autoSubmitTimeout() {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach((btn, i) => {
+                btn.disabled = true;
+            });
+
+            await update(ref(database, `rooms/${currentRoom}/players/${currentUser.id}`), {
+                answered: true,
+                score: (await get(ref(database, `rooms/${currentRoom}/players/${currentUser.id}/score`))).val() || 0
+            });
+
+            const feedback = document.getElementById('game-feedback');
+            feedback.classList.add('show', 'incorrect');
+            document.getElementById('game-feedback-title').textContent = '⏰ Time\'s Up!';
+            document.getElementById('game-feedback-text').textContent = 'You ran out of time. No points awarded for this question.';
+            document.getElementById('points-earned').style.display = 'none';
+            document.getElementById('waiting-next').style.display = 'block';
+            document.getElementById('timer-container').style.display = 'none';
         }
 
         // Event Listeners
@@ -605,7 +766,6 @@
             }
         });
 
-        // Allow Enter key to submit username
         document.getElementById('username-input').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 document.getElementById('username-btn').click();
@@ -624,18 +784,15 @@
         document.getElementById('leave-room-btn').addEventListener('click', leaveRoom);
         document.getElementById('back-to-menu-final-btn').addEventListener('click', backToMenu);
 
-        // Generate room code
         function generateRoomCode() {
             return Math.random().toString(36).substr(2, 6).toUpperCase();
         }
 
-        // Create room
         async function createRoom() {
             const roomCode = generateRoomCode();
             currentRoom = roomCode;
             isHost = true;
 
-            // Shuffle scenarios
             const shuffled = [...scenarios].sort(() => Math.random() - 0.5);
 
             const roomData = {
@@ -656,7 +813,6 @@
 
             await set(ref(database, `rooms/${roomCode}`), roomData);
 
-            // Setup disconnect handler
             const playerRef = ref(database, `rooms/${roomCode}/players/${currentUser.id}`);
             onDisconnect(playerRef).remove();
 
@@ -664,7 +820,6 @@
             showScreen('lobby-screen');
         }
 
-        // Join room
         async function joinRoom() {
             const roomCode = document.getElementById('room-code-input').value.trim().toUpperCase();
             if (!roomCode) {
@@ -696,7 +851,6 @@
                 isHost: false
             });
 
-            // Setup disconnect handler
             const playerRef = ref(database, `rooms/${roomCode}/players/${currentUser.id}`);
             onDisconnect(playerRef).remove();
 
@@ -704,7 +858,6 @@
             showScreen('lobby-screen');
         }
 
-        // Listen to room updates
         function listenToRoom(roomCode) {
             const roomRef = ref(database, `rooms/${roomCode}`);
             onValue(roomRef, (snapshot) => {
@@ -725,7 +878,6 @@
             });
         }
 
-        // Update lobby
         function updateLobby(roomData) {
             document.getElementById('lobby-room-code').textContent = currentRoom;
             
@@ -749,7 +901,6 @@
             }
         }
 
-        // Start game
         async function startGame() {
             await update(ref(database, `rooms/${currentRoom}`), {
                 status: 'playing',
@@ -758,7 +909,6 @@
             showScreen('game-screen');
         }
 
-        // Update game screen
         function updateGameScreen(roomData) {
             if (roomData.status !== 'playing') return;
 
@@ -772,18 +922,16 @@
             document.getElementById('scenario-type').textContent = scenario.type;
             document.getElementById('customer-text').textContent = scenario.customerText;
 
-            // Update scoreboard
             updateScoreboard(roomData.players);
 
-            // Show options if player hasn't answered
             const playerData = roomData.players[currentUser.id];
             if (!playerData.answered) {
                 showOptions(scenario, roomData);
             } else {
                 document.getElementById('waiting-next').style.display = 'block';
+                document.getElementById('timer-container').style.display = 'none';
             }
 
-            // Check if all players answered
             const allAnswered = Object.values(roomData.players).every(p => p.answered);
             if (allAnswered && isHost) {
                 setTimeout(() => {
@@ -806,9 +954,19 @@
 
             document.getElementById('game-feedback').classList.remove('show', 'correct', 'incorrect');
             document.getElementById('waiting-next').style.display = 'none';
+            document.getElementById('timer-container').style.display = 'block';
+            
+            // Start the timer
+            startQuestionTimer();
         }
 
         async function answerQuestion(index, isCorrect, scenario) {
+            stopTimer();
+            
+            const elapsed = Math.floor((Date.now() - questionStartTime) / 1000);
+            const timeRemaining = Math.max(0, QUESTION_TIME_LIMIT - elapsed);
+            const pointsEarned = isCorrect ? calculatePoints(timeRemaining) : 0;
+
             const buttons = document.querySelectorAll('.option-btn');
             buttons.forEach((btn, i) => {
                 btn.disabled = true;
@@ -821,35 +979,40 @@
                 buttons[index].classList.add('incorrect');
             }
 
-            // Update score
-            const scoreIncrement = isCorrect ? 100 : 0;
             const currentScoreSnapshot = await get(ref(database, `rooms/${currentRoom}/players/${currentUser.id}/score`));
             const currentScore = currentScoreSnapshot.val() || 0;
             
             await update(ref(database, `rooms/${currentRoom}/players/${currentUser.id}`), {
                 answered: true,
-                score: currentScore + scoreIncrement
+                score: currentScore + pointsEarned
             });
 
-            // Show feedback
             const feedback = document.getElementById('game-feedback');
             feedback.classList.add('show', isCorrect ? 'correct' : 'incorrect');
             document.getElementById('game-feedback-title').textContent = isCorrect ? '🎉 Excellent!' : '💡 Learning Moment';
+            
+            const pointsEarnedElement = document.getElementById('points-earned');
+            if (isCorrect) {
+                pointsEarnedElement.textContent = `+${pointsEarned} points`;
+                pointsEarnedElement.style.display = 'inline-block';
+            } else {
+                pointsEarnedElement.style.display = 'none';
+            }
+            
             document.getElementById('game-feedback-text').textContent = isCorrect ? scenario.correctFeedback : scenario.incorrectFeedback;
 
             document.getElementById('waiting-next').style.display = 'block';
+            document.getElementById('timer-container').style.display = 'none';
         }
 
         async function nextQuestion(roomData) {
             const nextQ = roomData.currentQuestion + 1;
             
             if (nextQ >= roomData.scenarios.length) {
-                // Game finished
                 await update(ref(database, `rooms/${currentRoom}`), {
                     status: 'finished'
                 });
             } else {
-                // Reset answered status for all players
                 const updates = {};
                 Object.keys(roomData.players).forEach(playerId => {
                     updates[`rooms/${currentRoom}/players/${playerId}/answered`] = false;
@@ -865,26 +1028,28 @@
             const html = sorted.map(([id, player]) => `
                 <div class="score-item ${id === currentUser.id ? 'current-player' : ''}">
                     <span>${player.name}</span>
-                    <span class="player-score">${player.score} pts</span>
+                    <span class="player-score">${player.score.toLocaleString()} pts</span>
                 </div>
             `).join('');
             document.getElementById('live-scoreboard').innerHTML = html;
         }
 
         function showResults(roomData) {
+            stopTimer();
             showScreen('results-screen');
             
             const sorted = Object.entries(roomData.players).sort((a, b) => b[1].score - a[1].score);
             const html = sorted.map(([id, player], index) => `
                 <div class="score-item ${id === currentUser.id ? 'current-player' : ''}">
                     <span>${index + 1}. ${player.name}</span>
-                    <span class="player-score">${player.score} pts</span>
+                    <span class="player-score">${player.score.toLocaleString()} pts</span>
                 </div>
             `).join('');
             document.getElementById('final-scoreboard').innerHTML = html;
         }
 
         async function leaveRoom() {
+            stopTimer();
             if (currentRoom) {
                 await remove(ref(database, `rooms/${currentRoom}/players/${currentUser.id}`));
                 currentRoom = null;
@@ -894,6 +1059,7 @@
         }
 
         function backToMenu() {
+            stopTimer();
             currentRoom = null;
             isHost = false;
             showScreen('menu-screen');
