@@ -346,7 +346,7 @@
                 <h1>Sales Skills Trainer</h1>
                 <p class="subtitle">Multiplayer Objection Handling</p>
                 <input type="text" id="username-input" placeholder="Enter your name" maxlength="20">
-                <button class="btn-primary" onclick="setUsername()">Continue</button>
+                <button class="btn-primary" id="username-btn">Continue</button>
             </div>
         </div>
 
@@ -355,8 +355,8 @@
             <div class="card">
                 <h1>Welcome, <span id="display-username"></span>!</h1>
                 <p class="subtitle">Ready to practice sales skills?</p>
-                <button class="btn-primary" onclick="createRoom()">Create New Game</button>
-                <button class="btn-secondary" onclick="showJoinRoom()">Join Existing Game</button>
+                <button class="btn-primary" id="create-room-btn">Create New Game</button>
+                <button class="btn-secondary" id="show-join-btn">Join Existing Game</button>
             </div>
         </div>
 
@@ -365,8 +365,8 @@
             <div class="card">
                 <h2>Join Game</h2>
                 <input type="text" id="room-code-input" placeholder="Enter room code" maxlength="6" style="text-transform: uppercase;">
-                <button class="btn-primary" onclick="joinRoom()">Join Game</button>
-                <button class="btn-secondary" onclick="showMenu()">Back</button>
+                <button class="btn-primary" id="join-room-btn">Join Game</button>
+                <button class="btn-secondary" id="back-to-menu-btn">Back</button>
             </div>
         </div>
 
@@ -382,11 +382,11 @@
                     <h3 style="margin-bottom: 15px;">Players (<span id="player-count">0</span>)</h3>
                     <div id="players-container"></div>
                 </div>
-                <button class="btn-primary" id="start-game-btn" style="display: none;" onclick="startGame()">Start Game</button>
+                <button class="btn-primary" id="start-game-btn" style="display: none;">Start Game</button>
                 <div class="waiting-message" id="waiting-message" style="display: none;">
                     Waiting for host to start the game...
                 </div>
-                <button class="btn-secondary" onclick="leaveRoom()">Leave Room</button>
+                <button class="btn-secondary" id="leave-room-btn">Leave Room</button>
             </div>
         </div>
 
@@ -432,9 +432,472 @@
                     <p class="subtitle">Final Results</p>
                 </div>
                 <div id="final-scoreboard"></div>
-                <button class="btn-primary" onclick="backToMenu()" style="margin-top: 20px;">Back to Menu</button>
+                <button class="btn-primary" id="back-to-menu-final-btn" style="margin-top: 20px;">Back to Menu</button>
             </div>
         </div>
     </div>
 
-    <!--
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, update, onValue, push, remove, onDisconnect } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBpwmaHVupoJjoFIVvTU9sfVWbqFiyJW4E",
+            authDomain: "sales-training-multi-player.firebaseapp.com",
+            databaseURL: "https://sales-training-multi-player-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "sales-training-multi-player",
+            storageBucket: "sales-training-multi-player.firebasestorage.app",
+            messagingSenderId: "995011237067",
+            appId: "1:995011237067:web:28bda644104401d285774e"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // Game scenarios
+        const scenarios = [
+            {
+                type: "Price Objection",
+                customerText: "Your price is too high. I can get the same thing cheaper from your competitor.",
+                options: [
+                    { text: "You're right, let me give you a discount right away.", correct: false },
+                    { text: "I understand price is important. Can I ask what you're comparing us to? Our solution includes X, Y, and Z that often aren't factored into initial price comparisons.", correct: true },
+                    { text: "Our competitors cut corners. You get what you pay for.", correct: false },
+                    { text: "That's our price, take it or leave it.", correct: false }
+                ],
+                correctFeedback: "Excellent! This response acknowledges the objection, asks clarifying questions, and highlights value without being defensive.",
+                incorrectFeedback: "Not quite. Jumping to discounts devalues your offering, being defensive damages trust, and being dismissive closes conversation."
+            },
+            {
+                type: "Timing Objection",
+                customerText: "This looks good, but now isn't the right time for us. Maybe next quarter.",
+                options: [
+                    { text: "I understand timing is everything. What specifically changes next quarter that would make this a better fit?", correct: true },
+                    { text: "No problem, I'll follow up in three months.", correct: false },
+                    { text: "Everyone says that. You're losing money every day you wait.", correct: false },
+                    { text: "We have a special offer ending this week that could help with budget concerns.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're uncovering the real reason behind the timing objection. Often 'not now' means something else.",
+                incorrectFeedback: "Simply accepting the delay or creating false urgency typically backfires. Dig deeper to understand what's really driving the concern."
+            },
+            {
+                type: "Authority Objection",
+                customerText: "I like this, but I need to run it by my boss first before we can move forward.",
+                options: [
+                    { text: "Great! When can you talk to them? I'll check back next week.", correct: false },
+                    { text: "That makes sense. To help you present this effectively to your boss, what are their main priorities right now? I can help you build the business case.", correct: true },
+                    { text: "Can we schedule a call with both of you? I'd love to present this directly.", correct: false },
+                    { text: "No worries, here's our brochure. Show it to them and let me know.", correct: false }
+                ],
+                correctFeedback: "Excellent! You're empowering your contact to be your internal champion by understanding the decision-maker's priorities.",
+                incorrectFeedback: "Don't lose control of the sale. Help them sell internally by understanding what matters to the decision-maker."
+            },
+            {
+                type: "Competition Objection",
+                customerText: "We're already working with your competitor. Why should we switch to you?",
+                options: [
+                    { text: "What's working well with them, and where do you wish things were different? I can show you how we specifically address those gaps.", correct: true },
+                    { text: "Our product is better in every way. Let me show you a comparison chart.", correct: false },
+                    { text: "They're good, but we're the industry leader. Here are our awards.", correct: false },
+                    { text: "I'm not asking you to switch - maybe we can work together on a different project?", correct: false }
+                ],
+                correctFeedback: "Great work! You're learning what's working and what isn't, allowing you to position your unique value against their specific pain points.",
+                incorrectFeedback: "Directly attacking competitors or retreating entirely are both weak moves. Focus on understanding their current situation."
+            },
+            {
+                type: "Need Objection",
+                customerText: "I'm not sure we really need this right now. Things are working fine as they are.",
+                options: [
+                    { text: "That's great that things are working! Out of curiosity, what would have to change for a solution like this to become a priority?", correct: true },
+                    { text: "Just because things work doesn't mean they can't be better. Let me show you our ROI calculator.", correct: false },
+                    { text: "I understand. Can I stay in touch for when things change?", correct: false },
+                    { text: "Most of our clients said the same thing before they saw what they were missing out on.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're accepting their current state while exploring what future triggers might exist.",
+                incorrectFeedback: "Pushing value when someone doesn't see a need creates resistance. Understand what would trigger need in the future."
+            },
+            {
+                type: "Feature Objection",
+                customerText: "Your product doesn't have a specific feature that we need.",
+                options: [
+                    { text: "You're right, we don't have that yet. Let me see if it's on our roadmap.", correct: false },
+                    { text: "Tell me more about how you'd use that feature. I want to understand if we solve that need differently or if it's truly a gap for you.", correct: true },
+                    { text: "That feature isn't as important as most people think. Here's why our approach is better.", correct: false },
+                    { text: "We can custom build that for you, but it will cost extra.", correct: false }
+                ],
+                correctFeedback: "Excellent! You're digging into the underlying need rather than immediately conceding or defending.",
+                incorrectFeedback: "Don't immediately give up or get defensive. Understand why they want that feature."
+            },
+            {
+                type: "Trust Objection",
+                customerText: "I've never heard of your company. How do I know you'll be around in a year?",
+                options: [
+                    { text: "We've been in business for X years, have Y customers, and are backed by Z investors.", correct: false },
+                    { text: "I appreciate that concern - choosing a partner is a big decision. What would give you confidence in working with us? References from similar companies, a pilot program, or something else?", correct: true },
+                    { text: "All our competitors started where we are. We're the future of this industry.", correct: false },
+                    { text: "We offer a money-back guarantee, so there's no risk to you.", correct: false }
+                ],
+                correctFeedback: "Great approach! Rather than just listing credentials, you're understanding what would specifically build trust for them.",
+                incorrectFeedback: "Simply listing facts about your company or making bold claims often doesn't build real trust."
+            },
+            {
+                type: "Budget Objection",
+                customerText: "We don't have budget for this right now.",
+                options: [
+                    { text: "When does your budget refresh? I can follow up then.", correct: false },
+                    { text: "We have flexible payment plans that could work with your current budget.", correct: false },
+                    { text: "I understand budget is tight. Help me understand - if budget weren't a constraint, is this something you'd want to move forward with?", correct: true },
+                    { text: "The ROI on this pays for itself in 6 months, so budget shouldn't be an issue.", correct: false }
+                ],
+                correctFeedback: "Perfect! You're separating 'no budget' from 'no interest.' This helps you understand if budget is the real blocker.",
+                incorrectFeedback: "Budget objections are often smoke screens for other issues. Confirm whether budget is the real blocker."
+            },
+            {
+                type: "Reference Objection",
+                customerText: "Do you have any clients in our industry? I'd want to see case studies first.",
+                options: [
+                    { text: "We work across many industries. Let me send you some general case studies.", correct: false },
+                    { text: "That's a smart question. We have clients in similar industries. What specific outcomes or challenges would be most relevant for you to see?", correct: true },
+                    { text: "We're relatively new to your industry, but our solution is industry-agnostic.", correct: false },
+                    { text: "I can't share client names due to NDAs, but I can speak to the results we've driven.", correct: false }
+                ],
+                correctFeedback: "Excellent! You're showing relevant experience while focusing them on outcomes and challenges they care about.",
+                incorrectFeedback: "Generic case studies or vague references don't build confidence. Understand what they specifically want to see proven."
+            },
+            {
+                type: "Stall Objection",
+                customerText: "Let me think about it and I'll get back to you.",
+                options: [
+                    { text: "Absolutely, take your time. When should I follow up?", correct: false },
+                    { text: "Of course. Just to make sure I've given you everything you need - what specific areas do you want to think through?", correct: true },
+                    { text: "I understand you want to think it over. Just so you know, this pricing is only available until Friday.", correct: false },
+                    { text: "Sure thing. I'll send over some additional materials for you to review.", correct: false }
+                ],
+                correctFeedback: "Perfect! 'Let me think about it' usually means 'I have unspoken concerns.' By asking what they need to think through, you surface real objections.",
+                incorrectFeedback: "Accepting a stall or creating false urgency typically leads to ghosting. Respectfully uncover what's really on their mind."
+            }
+        ];
+
+        // Global state
+        let currentUser = null;
+        let currentRoom = null;
+        let isHost = false;
+
+        // Show/hide screens
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        // Event Listeners
+        document.getElementById('username-btn').addEventListener('click', function() {
+            const username = document.getElementById('username-input').value.trim();
+            if (username) {
+                currentUser = {
+                    id: 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    name: username
+                };
+                document.getElementById('display-username').textContent = username;
+                showScreen('menu-screen');
+            } else {
+                alert('Please enter your name');
+            }
+        });
+
+        // Allow Enter key to submit username
+        document.getElementById('username-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('username-btn').click();
+            }
+        });
+
+        document.getElementById('create-room-btn').addEventListener('click', createRoom);
+        document.getElementById('show-join-btn').addEventListener('click', function() {
+            showScreen('join-screen');
+        });
+        document.getElementById('join-room-btn').addEventListener('click', joinRoom);
+        document.getElementById('back-to-menu-btn').addEventListener('click', function() {
+            showScreen('menu-screen');
+        });
+        document.getElementById('start-game-btn').addEventListener('click', startGame);
+        document.getElementById('leave-room-btn').addEventListener('click', leaveRoom);
+        document.getElementById('back-to-menu-final-btn').addEventListener('click', backToMenu);
+
+        // Generate room code
+        function generateRoomCode() {
+            return Math.random().toString(36).substr(2, 6).toUpperCase();
+        }
+
+        // Create room
+        async function createRoom() {
+            const roomCode = generateRoomCode();
+            currentRoom = roomCode;
+            isHost = true;
+
+            // Shuffle scenarios
+            const shuffled = [...scenarios].sort(() => Math.random() - 0.5);
+
+            const roomData = {
+                host: currentUser.id,
+                status: 'lobby',
+                createdAt: Date.now(),
+                scenarios: shuffled,
+                currentQuestion: 0,
+                players: {
+                    [currentUser.id]: {
+                        name: currentUser.name,
+                        score: 0,
+                        answered: false,
+                        isHost: true
+                    }
+                }
+            };
+
+            await set(ref(database, `rooms/${roomCode}`), roomData);
+
+            // Setup disconnect handler
+            const playerRef = ref(database, `rooms/${roomCode}/players/${currentUser.id}`);
+            onDisconnect(playerRef).remove();
+
+            listenToRoom(roomCode);
+            showScreen('lobby-screen');
+        }
+
+        // Join room
+        async function joinRoom() {
+            const roomCode = document.getElementById('room-code-input').value.trim().toUpperCase();
+            if (!roomCode) {
+                alert('Please enter a room code');
+                return;
+            }
+
+            const roomRef = ref(database, `rooms/${roomCode}`);
+            const snapshot = await get(roomRef);
+
+            if (!snapshot.exists()) {
+                alert('Room not found');
+                return;
+            }
+
+            const roomData = snapshot.val();
+            if (roomData.status !== 'lobby') {
+                alert('Game already in progress');
+                return;
+            }
+
+            currentRoom = roomCode;
+            isHost = false;
+
+            await update(ref(database, `rooms/${roomCode}/players/${currentUser.id}`), {
+                name: currentUser.name,
+                score: 0,
+                answered: false,
+                isHost: false
+            });
+
+            // Setup disconnect handler
+            const playerRef = ref(database, `rooms/${roomCode}/players/${currentUser.id}`);
+            onDisconnect(playerRef).remove();
+
+            listenToRoom(roomCode);
+            showScreen('lobby-screen');
+        }
+
+        // Listen to room updates
+        function listenToRoom(roomCode) {
+            const roomRef = ref(database, `rooms/${roomCode}`);
+            onValue(roomRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    alert('Room has been closed');
+                    backToMenu();
+                    return;
+                }
+
+                const roomData = snapshot.val();
+                updateLobby(roomData);
+
+                if (roomData.status === 'playing') {
+                    updateGameScreen(roomData);
+                } else if (roomData.status === 'finished') {
+                    showResults(roomData);
+                }
+            });
+        }
+
+        // Update lobby
+        function updateLobby(roomData) {
+            document.getElementById('lobby-room-code').textContent = currentRoom;
+            
+            const players = Object.values(roomData.players || {});
+            document.getElementById('player-count').textContent = players.length;
+
+            const container = document.getElementById('players-container');
+            container.innerHTML = players.map(player => `
+                <div class="player-item">
+                    <span class="player-name">${player.name}</span>
+                    ${player.isHost ? '<span class="host-badge">Host</span>' : ''}
+                </div>
+            `).join('');
+
+            if (isHost) {
+                document.getElementById('start-game-btn').style.display = 'block';
+                document.getElementById('waiting-message').style.display = 'none';
+            } else {
+                document.getElementById('start-game-btn').style.display = 'none';
+                document.getElementById('waiting-message').style.display = 'block';
+            }
+        }
+
+        // Start game
+        async function startGame() {
+            await update(ref(database, `rooms/${currentRoom}`), {
+                status: 'playing',
+                currentQuestion: 0
+            });
+            showScreen('game-screen');
+        }
+
+        // Update game screen
+        function updateGameScreen(roomData) {
+            if (roomData.status !== 'playing') return;
+
+            showScreen('game-screen');
+
+            const currentQ = roomData.currentQuestion;
+            const scenario = roomData.scenarios[currentQ];
+
+            document.getElementById('question-number').textContent = currentQ + 1;
+            document.getElementById('total-questions').textContent = roomData.scenarios.length;
+            document.getElementById('scenario-type').textContent = scenario.type;
+            document.getElementById('customer-text').textContent = scenario.customerText;
+
+            // Update scoreboard
+            updateScoreboard(roomData.players);
+
+            // Show options if player hasn't answered
+            const playerData = roomData.players[currentUser.id];
+            if (!playerData.answered) {
+                showOptions(scenario, roomData);
+            } else {
+                document.getElementById('waiting-next').style.display = 'block';
+            }
+
+            // Check if all players answered
+            const allAnswered = Object.values(roomData.players).every(p => p.answered);
+            if (allAnswered && isHost) {
+                setTimeout(() => {
+                    nextQuestion(roomData);
+                }, 3000);
+            }
+        }
+
+        function showOptions(scenario, roomData) {
+            const container = document.getElementById('game-options');
+            container.innerHTML = '';
+            
+            scenario.options.forEach((option, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.textContent = option.text;
+                btn.addEventListener('click', () => answerQuestion(i, option.correct, scenario));
+                container.appendChild(btn);
+            });
+
+            document.getElementById('game-feedback').classList.remove('show', 'correct', 'incorrect');
+            document.getElementById('waiting-next').style.display = 'none';
+        }
+
+        async function answerQuestion(index, isCorrect, scenario) {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach((btn, i) => {
+                btn.disabled = true;
+                if (scenario.options[i].correct) {
+                    btn.classList.add('correct');
+                }
+            });
+
+            if (!isCorrect) {
+                buttons[index].classList.add('incorrect');
+            }
+
+            // Update score
+            const scoreIncrement = isCorrect ? 100 : 0;
+            const currentScoreSnapshot = await get(ref(database, `rooms/${currentRoom}/players/${currentUser.id}/score`));
+            const currentScore = currentScoreSnapshot.val() || 0;
+            
+            await update(ref(database, `rooms/${currentRoom}/players/${currentUser.id}`), {
+                answered: true,
+                score: currentScore + scoreIncrement
+            });
+
+            // Show feedback
+            const feedback = document.getElementById('game-feedback');
+            feedback.classList.add('show', isCorrect ? 'correct' : 'incorrect');
+            document.getElementById('game-feedback-title').textContent = isCorrect ? '🎉 Excellent!' : '💡 Learning Moment';
+            document.getElementById('game-feedback-text').textContent = isCorrect ? scenario.correctFeedback : scenario.incorrectFeedback;
+
+            document.getElementById('waiting-next').style.display = 'block';
+        }
+
+        async function nextQuestion(roomData) {
+            const nextQ = roomData.currentQuestion + 1;
+            
+            if (nextQ >= roomData.scenarios.length) {
+                // Game finished
+                await update(ref(database, `rooms/${currentRoom}`), {
+                    status: 'finished'
+                });
+            } else {
+                // Reset answered status for all players
+                const updates = {};
+                Object.keys(roomData.players).forEach(playerId => {
+                    updates[`rooms/${currentRoom}/players/${playerId}/answered`] = false;
+                });
+                updates[`rooms/${currentRoom}/currentQuestion`] = nextQ;
+                
+                await update(ref(database), updates);
+            }
+        }
+
+        function updateScoreboard(players) {
+            const sorted = Object.entries(players).sort((a, b) => b[1].score - a[1].score);
+            const html = sorted.map(([id, player]) => `
+                <div class="score-item ${id === currentUser.id ? 'current-player' : ''}">
+                    <span>${player.name}</span>
+                    <span class="player-score">${player.score} pts</span>
+                </div>
+            `).join('');
+            document.getElementById('live-scoreboard').innerHTML = html;
+        }
+
+        function showResults(roomData) {
+            showScreen('results-screen');
+            
+            const sorted = Object.entries(roomData.players).sort((a, b) => b[1].score - a[1].score);
+            const html = sorted.map(([id, player], index) => `
+                <div class="score-item ${id === currentUser.id ? 'current-player' : ''}">
+                    <span>${index + 1}. ${player.name}</span>
+                    <span class="player-score">${player.score} pts</span>
+                </div>
+            `).join('');
+            document.getElementById('final-scoreboard').innerHTML = html;
+        }
+
+        async function leaveRoom() {
+            if (currentRoom) {
+                await remove(ref(database, `rooms/${currentRoom}/players/${currentUser.id}`));
+                currentRoom = null;
+                isHost = false;
+            }
+            showScreen('menu-screen');
+        }
+
+        function backToMenu() {
+            currentRoom = null;
+            isHost = false;
+            showScreen('menu-screen');
+        }
+    </script>
+</body>
+</html>
