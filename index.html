@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Skills Trainer</title>
+    <style>
+        /* This CSS styles your app to look good on mobile */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .score-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .scenario-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .customer-speech {
+            background: #f3f4f6;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 25px;
+        }
+
+        .customer-speech p {
+            font-size: 18px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .customer-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .question {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: white;
+            border: 2px solid #e5e7eb;
+            padding: 18px;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .option-btn.correct {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+
+        .option-btn.incorrect {
+            background: #ef4444;
+            color: white;
+            border-color: #ef4444;
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        .feedback.correct {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+        }
+
+        .feedback.incorrect {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+        }
+
+        .feedback-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 18px;
+        }
+
+        .next-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .next-btn.show {
+            display: inline-block;
+        }
+
+        .next-btn:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header with score -->
+        <div class="header">
+            <div class="score-display">
+                <div>
+                    <h1 style="font-size: 24px; margin-bottom: 5px;">Sales Skills Trainer</h1>
+                    <p style="color: #6b7280; font-size: 14px;">Practice handling objections</p>
+                </div>
+                <div class="score">
+                    <span id="score">0</span> pts
+                </div>
+            </div>
+        </div>
+
+        <!-- Scenario card -->
+        <div class="scenario-card">
+            <div class="customer-speech">
+                <div class="customer-label">Customer says:</div>
+                <p id="customer-text">"Your price is too high. I can get the same thing cheaper from your competitor."</p>
+            </div>
+
+            <div class="question">How do you respond?</div>
+
+            <div class="options" id="options">
+                <button class="option-btn" data-correct="false" data-points="0">
+                    "You're right, let me give you a discount right away."
+                </button>
+                <button class="option-btn" data-correct="true" data-points="100">
+                    "I understand price is important. Can I ask what you're comparing us to? Our solution includes X, Y, and Z that often aren't factored into initial price comparisons."
+                </button>
+                <button class="option-btn" data-correct="false" data-points="0">
+                    "Our competitors cut corners. You get what you pay for."
+                </button>
+                <button class="option-btn" data-correct="false" data-points="0">
+                    "That's our price, take it or leave it."
+                </button>
+            </div>
+
+            <div class="feedback" id="feedback">
+                <div class="feedback-title" id="feedback-title"></div>
+                <p id="feedback-text"></p>
+                <button class="next-btn" id="next-btn">Next Scenario</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // This JavaScript makes the app interactive
+        
+        // Get references to elements we'll need to update
+        const scoreElement = document.getElementById('score');
+        const optionButtons = document.querySelectorAll('.option-btn');
+        const feedbackDiv = document.getElementById('feedback');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackText = document.getElementById('feedback-text');
+        const nextBtn = document.getElementById('next-btn');
+        
+        // Track the user's score
+        let score = 0;
+
+        // Feedback messages for correct and incorrect answers
+        const correctFeedback = "Excellent! This response acknowledges the objection, asks clarifying questions, and highlights value without being defensive. You've demonstrated active listening and positioned your product's unique benefits.";
+        
+        const incorrectFeedback = "Not quite. Jumping to discounts too quickly devalues your offering, being defensive about competitors damages trust, and being dismissive closes the conversation. Try understanding their concerns first and highlighting your unique value.";
+
+        // Add click event to each option button
+        optionButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Prevent clicking multiple times
+                if (this.disabled) return;
+                
+                // Check if answer is correct
+                const isCorrect = this.dataset.correct === 'true';
+                const points = parseInt(this.dataset.points);
+                
+                // Update score if correct
+                if (isCorrect) {
+                    score += points;
+                    scoreElement.textContent = score;
+                }
+                
+                // Show visual feedback on buttons
+                this.classList.add(isCorrect ? 'correct' : 'incorrect');
+                
+                // Disable all buttons after selection
+                optionButtons.forEach(btn => btn.disabled = true);
+                
+                // Show feedback message
+                feedbackDiv.classList.add('show', isCorrect ? 'correct' : 'incorrect');
+                feedbackTitle.textContent = isCorrect ? '🎉 Great job!' : '💡 Learning moment';
+                feedbackText.textContent = isCorrect ? correctFeedback : incorrectFeedback;
+                nextBtn.classList.add('show');
+            });
+        });
+
+        // Next button reloads the page (in future, this will load new scenarios)
+        nextBtn.addEventListener('click', function() {
+            alert('Great work! In the full version, this will load new scenarios. For now, refresh the page to try again.');
+            location.reload();
+        });
+    </script>
+</body>
+</html>
