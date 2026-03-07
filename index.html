@@ -777,6 +777,11 @@
             showScreen('join-screen');
         });
         document.getElementById('join-room-btn').addEventListener('click', joinRoom);
+        document.getElementById('room-code-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('join-room-btn').click();
+            }
+        });
         document.getElementById('back-to-menu-btn').addEventListener('click', function() {
             showScreen('menu-screen');
         });
